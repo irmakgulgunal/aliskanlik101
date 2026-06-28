@@ -12,8 +12,11 @@ import {
   Footprints,
   Heart,
   Home,
+  Monitor,
+  Moon,
   Plus,
   Sparkles,
+  Sun,
   Trash2,
 } from "lucide-react";
 import {
@@ -46,6 +49,7 @@ import {
   weeklyTrend,
 } from "@/lib/habits";
 import { cn } from "@/lib/utils";
+import { useTheme, type Theme } from "@/lib/theme";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -116,8 +120,11 @@ function Index() {
             {greeting()}.
           </h1>
         </div>
-        <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-          <Bell className="size-5 text-primary" />
+        <div className="flex items-center gap-2">
+          <ThemeToggle />
+          <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
+            <Bell className="size-5 text-primary" />
+          </div>
         </div>
       </header>
 
@@ -271,6 +278,24 @@ function FilterChip({
     </button>
   );
 }
+
+function ThemeToggle() {
+  const { theme, cycle } = useTheme();
+  const label: Record<Theme, string> = { light: "Aydınlık", dark: "Karanlık", system: "Sistem" };
+  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
+  return (
+    <button
+      onClick={cycle}
+      aria-label={`Tema: ${label[theme]} — değiştir`}
+      title={`Tema: ${label[theme]}`}
+      className="size-10 rounded-2xl bg-card border flex items-center justify-center text-foreground/80 hover:text-foreground transition-colors"
+    >
+      <Icon className="size-5" />
+    </button>
+  );
+}
+
+
 
 function NavBtn({
   active,
