@@ -295,29 +295,7 @@ function ThemeToggle() {
   );
 }
 
-function FilterChipDuplicate({
-  active,
-  children,
-  onClick,
-}: {
-  active: boolean;
-  children: React.ReactNode;
-  onClick: () => void;
-}) {
-  return (
-    <button
-      onClick={onClick}
-      className={cn(
-        "whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-colors",
-        active
-          ? "bg-foreground text-background"
-          : "bg-card border text-muted-foreground hover:text-foreground",
-      )}
-    >
-      {children}
-    </button>
-  );
-}
+
 
 function NavBtn({
   active,
