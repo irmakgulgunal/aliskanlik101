@@ -36,11 +36,14 @@ import {
   formatToday,
   greeting,
   last7Days,
+  monthlyCompletionRate,
+  monthlyDailyRates,
   todayKey,
   todaysTip,
   useHabits,
   WEEKDAY_TR,
   weeklyCompletionRate,
+  weeklyTrend,
 } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 
@@ -106,10 +109,10 @@ function Index() {
       {/* Header */}
       <header className="flex justify-between items-end mb-8 animate-in">
         <div>
-          <p className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
+          <p suppressHydrationWarning className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-1">
             {formatToday()}
           </p>
-          <h1 className="text-3xl font-extrabold tracking-tight text-balance">
+          <h1 suppressHydrationWarning className="text-3xl font-extrabold tracking-tight text-balance">
             {greeting()}.
           </h1>
         </div>
@@ -385,8 +388,68 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
 
 function StatsView({ habits }: { habits: Habit[] }) {
   const days = last7Days();
+  const monthRates = monthlyDailyRates(habits, 30);
+  const monthRate = monthlyCompletionRate(habits, 30);
+  const trend = weeklyTrend(habits, 8);
+  const maxWeek = Math.max(0.0001, ...trend.map((t) => t.rate));
   return (
     <section className="space-y-6 animate-in">
+      {/* Monthly heatmap */}
+      <div className="p-5 bg-card rounded-[2rem] border">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-sm font-semibold">Son 30 Gün</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Günlük tamamlanma yoğunluğu</p>
+          </div>
+          <span className="text-xs font-mono bg-accent/30 px-2 py-0.5 rounded-full">
+            %{monthRate}
+          </span>
+        </div>
+        <div className="grid grid-cols-10 gap-1.5">
+          {monthRates.map((r, i) => (
+            <div
+              key={i}
+              className="aspect-square rounded-md bg-primary"
+              style={{ opacity: 0.12 + r * 0.88 }}
+              title={`Gün ${i + 1}: %${Math.round(r * 100)}`}
+            />
+          ))}
+        </div>
+        <div className="flex items-center justify-end gap-1.5 mt-3 text-[10px] font-mono text-muted-foreground">
+          <span>az</span>
+          {[0.15, 0.35, 0.6, 0.85, 1].map((o) => (
+            <div key={o} className="size-2.5 rounded-sm bg-primary" style={{ opacity: o }} />
+          ))}
+          <span>çok</span>
+        </div>
+      </div>
+
+      {/* Weekly trend over 8 weeks */}
+      <div className="p-5 bg-card rounded-[2rem] border">
+        <div className="flex justify-between items-start mb-4">
+          <div>
+            <h2 className="text-sm font-semibold">Aylık Trend</h2>
+            <p className="text-xs text-muted-foreground mt-0.5">Son 8 haftanın ortalaması</p>
+          </div>
+        </div>
+        <div className="flex gap-2 items-end h-24">
+          {trend.map((t, i) => (
+            <div key={i} className="flex-1 flex flex-col items-center gap-1">
+              <div className="w-full h-full flex items-end">
+                <div
+                  className="w-full bg-primary rounded-t-lg transition-all"
+                  style={{
+                    height: `${Math.max(6, (t.rate / maxWeek) * 100)}%`,
+                    opacity: 0.4 + (t.rate / maxWeek) * 0.6,
+                  }}
+                />
+              </div>
+              <span className="text-[9px] font-mono text-muted-foreground">{t.label}</span>
+            </div>
+          ))}
+        </div>
+      </div>
+
       <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground">
         Alışkanlık Bazlı Zincirler
       </h2>
