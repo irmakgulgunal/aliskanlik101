@@ -524,8 +524,6 @@ function StatsView({ habits }: { habits: Habit[] }) {
   );
 }
 
-function AddHabitDialog({
-
 function BadgesView({ habits }: { habits: Habit[] }) {
   const progress = badgeProgress(habits);
   const earned = progress.filter((p) => p.earned);
@@ -627,7 +625,7 @@ function BadgeCard({ progress }: { progress: ReturnType<typeof badgeProgress>[nu
   );
 }
 
-function AddHabitDialogStub({
+function AddHabitDialog({
   open,
   onOpenChange,
   onSubmit,
