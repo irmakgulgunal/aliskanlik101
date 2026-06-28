@@ -36,7 +36,9 @@ import {
   type Habit,
   currentStreak,
   dailyRates,
+  defaultReminderTimes,
   formatToday,
+  getReminderTimes,
   greeting,
   last7Days,
   monthlyCompletionRate,
@@ -338,6 +340,13 @@ function HabitCard({
   const Icon = pickIcon(habit.name);
   const CatIcon = ICONS_FOR_CATEGORY[habit.category];
   const streak = currentStreak(habit);
+  const reminders = getReminderTimes(habit);
+  const reminderLabel =
+    reminders.length === 0
+      ? ""
+      : reminders.length === 1
+        ? reminders[0]
+        : `${reminders.length}× ${reminders.join(" · ")}`;
 
   return (
     <div
@@ -359,7 +368,7 @@ function HabitCard({
             <CatIcon className="size-3 text-muted-foreground" />
             <p className="text-xs text-muted-foreground truncate">
               {habit.microGoal}
-              {habit.reminder ? ` • ${habit.reminder}` : ""}
+              {reminderLabel ? ` • 🔔 ${reminderLabel}` : ""}
             </p>
           </div>
           {streak > 0 && (
@@ -632,25 +641,43 @@ function AddHabitDialog({
 }: {
   open: boolean;
   onOpenChange: (v: boolean) => void;
-  onSubmit: (h: { name: string; microGoal: string; category: Category; reminder?: string }) => void;
+  onSubmit: (h: {
+    name: string;
+    microGoal: string;
+    category: Category;
+    reminders?: string[];
+  }) => void;
 }) {
   const [name, setName] = useState("");
   const [micro, setMicro] = useState("");
   const [cat, setCat] = useState<Category>("saglik");
-  const [reminder, setReminder] = useState("");
+  const [count, setCount] = useState(1);
+  const [times, setTimes] = useState<string[]>(defaultReminderTimes(1));
+
+  const setCountSafe = (n: number) => {
+    const c = Math.max(0, Math.min(6, n));
+    setCount(c);
+    setTimes(defaultReminderTimes(c));
+  };
+
+  const updateTime = (idx: number, val: string) => {
+    setTimes((prev) => prev.map((t, i) => (i === idx ? val : t)));
+  };
 
   const submit = () => {
     if (!name.trim()) return;
+    const cleaned = times.filter((t) => t && /^\d{2}:\d{2}$/.test(t));
     onSubmit({
       name: name.trim(),
       microGoal: micro.trim() || "Mikro adımla başla",
       category: cat,
-      reminder: reminder || undefined,
+      reminders: cleaned.length > 0 ? cleaned : undefined,
     });
     setName("");
     setMicro("");
     setCat("saglik");
-    setReminder("");
+    setCount(1);
+    setTimes(defaultReminderTimes(1));
   };
 
   return (
@@ -691,9 +718,51 @@ function AddHabitDialog({
               ))}
             </div>
           </div>
-          <div className="space-y-1.5">
-            <Label htmlFor="reminder">Hatırlatıcı saati (opsiyonel)</Label>
-            <Input id="reminder" type="time" value={reminder} onChange={(e) => setReminder(e.target.value)} />
+          <div className="space-y-2">
+            <div className="flex items-center justify-between">
+              <Label>Günlük hatırlatıcı sayısı</Label>
+              <div className="flex items-center gap-2">
+                <button
+                  type="button"
+                  onClick={() => setCountSafe(count - 1)}
+                  className="size-8 rounded-full bg-secondary text-foreground font-bold active:scale-90"
+                  aria-label="Azalt"
+                >
+                  −
+                </button>
+                <span className="font-mono text-sm w-6 text-center">{count}</span>
+                <button
+                  type="button"
+                  onClick={() => setCountSafe(count + 1)}
+                  className="size-8 rounded-full bg-secondary text-foreground font-bold active:scale-90"
+                  aria-label="Artır"
+                >
+                  +
+                </button>
+              </div>
+            </div>
+            <p className="text-[11px] text-muted-foreground">
+              {count === 0
+                ? "Hatırlatıcı yok — sessiz mod."
+                : `Günde ${count} kez bildirim alacaksın. Saatleri özelleştirebilirsin.`}
+            </p>
+            {count > 0 && (
+              <div className="grid grid-cols-2 gap-2 pt-1">
+                {times.map((t, i) => (
+                  <div key={i} className="space-y-1">
+                    <Label htmlFor={`time-${i}`} className="text-[11px] text-muted-foreground">
+                      {i + 1}. hatırlatma
+                    </Label>
+                    <Input
+                      id={`time-${i}`}
+                      type="time"
+                      value={t}
+                      onChange={(e) => updateTime(i, e.target.value)}
+                    />
+                  </div>
+                ))}
+              </div>
+            )}
           </div>
         </div>
         <DialogFooter>
