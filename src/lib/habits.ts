@@ -172,6 +172,58 @@ export function dailyRates(habits: Habit[]): number[] {
   });
 }
 
+export function lastNDays(n: number): Date[] {
+  const out: Date[] = [];
+  for (let i = n - 1; i >= 0; i--) {
+    const d = new Date();
+    d.setDate(d.getDate() - i);
+    out.push(d);
+  }
+  return out;
+}
+
+export function monthlyDailyRates(habits: Habit[], days = 30): number[] {
+  return lastNDays(days).map((d) => {
+    const k = dateKey(d);
+    if (habits.length === 0) return 0;
+    const done = habits.filter((h) => h.completions.includes(k)).length;
+    return done / habits.length;
+  });
+}
+
+export function monthlyCompletionRate(habits: Habit[], days = 30): number {
+  const rates = monthlyDailyRates(habits, days);
+  if (rates.length === 0) return 0;
+  const avg = rates.reduce((s, r) => s + r, 0) / rates.length;
+  return Math.round(avg * 100);
+}
+
+// Weekly aggregation across the last `weeks` weeks (oldest -> newest).
+export function weeklyTrend(habits: Habit[], weeks = 8): { label: string; rate: number }[] {
+  const out: { label: string; rate: number }[] = [];
+  for (let w = weeks - 1; w >= 0; w--) {
+    const days: Date[] = [];
+    for (let i = 6; i >= 0; i--) {
+      const d = new Date();
+      d.setDate(d.getDate() - (w * 7 + i));
+      days.push(d);
+    }
+    let done = 0;
+    let total = 0;
+    for (const d of days) {
+      const k = dateKey(d);
+      for (const h of habits) {
+        total += 1;
+        if (h.completions.includes(k)) done += 1;
+      }
+    }
+    const rate = total === 0 ? 0 : done / total;
+    const last = days[days.length - 1];
+    out.push({ label: `${last.getDate()}/${last.getMonth() + 1}`, rate });
+  }
+  return out;
+}
+
 export const WEEKDAY_TR = ["Pzt", "Sal", "Çar", "Per", "Cum", "Cmt", "Paz"];
 
 export function formatToday(): string {
