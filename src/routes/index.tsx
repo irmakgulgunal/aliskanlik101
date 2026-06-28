@@ -131,8 +131,19 @@ function Index() {
         </div>
       </header>
 
-      {view === "home" ? (
+        {view === "home" ? (
         <>
+          {/* Micro tip */}
+          <div className="mb-6 p-4 bg-accent/20 rounded-3xl flex items-center gap-4 animate-in" style={{ animationDelay: "50ms" }}>
+            <div className="size-10 bg-accent rounded-2xl flex-shrink-0 flex items-center justify-center">
+              <Sparkles className="size-5 text-accent-foreground" />
+            </div>
+            <div className="flex-1">
+              <p className="text-[10px] font-mono uppercase text-foreground/60">Mikro Öneri</p>
+              <p className="text-sm font-semibold">{todaysTip()}</p>
+            </div>
+          </div>
+
           {/* Bento Stats */}
           <section className="grid grid-cols-2 gap-3 mb-8 animate-in" style={{ animationDelay: "100ms" }}>
             <div className="col-span-2 p-5 bg-card rounded-[2rem] border shadow-sm flex flex-col justify-between aspect-[2/1]">
@@ -206,17 +217,6 @@ function Index() {
               ))
             )}
           </section>
-
-          {/* Micro tip */}
-          <div className="mt-6 p-4 bg-accent/20 rounded-3xl flex items-center gap-4 animate-in" style={{ animationDelay: "500ms" }}>
-            <div className="size-10 bg-accent rounded-2xl flex-shrink-0 flex items-center justify-center">
-              <Sparkles className="size-5 text-accent-foreground" />
-            </div>
-            <div className="flex-1">
-              <p className="text-[10px] font-mono uppercase text-foreground/60">Mikro Öneri</p>
-              <p className="text-sm font-semibold">{todaysTip()}</p>
-            </div>
-          </div>
         </>
       ) : view === "stats" ? (
         <StatsView habits={habits} />
