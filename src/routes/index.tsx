@@ -279,6 +279,46 @@ function FilterChip({
   );
 }
 
+function ThemeToggle() {
+  const { theme, cycle } = useTheme();
+  const label: Record<Theme, string> = { light: "Aydınlık", dark: "Karanlık", system: "Sistem" };
+  const Icon = theme === "light" ? Sun : theme === "dark" ? Moon : Monitor;
+  return (
+    <button
+      onClick={cycle}
+      aria-label={`Tema: ${label[theme]} — değiştir`}
+      title={`Tema: ${label[theme]}`}
+      className="size-10 rounded-2xl bg-card border flex items-center justify-center text-foreground/80 hover:text-foreground transition-colors"
+    >
+      <Icon className="size-5" />
+    </button>
+  );
+}
+
+function FilterChipDuplicate({
+  active,
+  children,
+  onClick,
+}: {
+  active: boolean;
+  children: React.ReactNode;
+  onClick: () => void;
+}) {
+  return (
+    <button
+      onClick={onClick}
+      className={cn(
+        "whitespace-nowrap px-4 py-2 rounded-full text-sm font-semibold transition-colors",
+        active
+          ? "bg-foreground text-background"
+          : "bg-card border text-muted-foreground hover:text-foreground",
+      )}
+    >
+      {children}
+    </button>
+  );
+}
+
 function NavBtn({
   active,
   children,
