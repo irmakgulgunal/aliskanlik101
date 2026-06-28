@@ -13,7 +13,10 @@ export type Habit = {
   name: string;
   microGoal: string;
   category: Category;
-  reminder?: string; // "HH:MM"
+  /** Geriye dönük: tek hatırlatma saati. Yeni kayıtlarda `reminders` kullanılır. */
+  reminder?: string;
+  /** Gün içinde gönderilecek hatırlatıcı saatleri ("HH:MM"). */
+  reminders?: string[];
   createdAt: string; // ISO date
   completions: string[]; // YYYY-MM-DD list
 };
@@ -35,7 +38,7 @@ const SEED: Habit[] = [
     name: "Su İç",
     microGoal: "Hedef: 2.5 Litre",
     category: "saglik",
-    reminder: "10:00",
+    reminders: ["09:00", "13:00", "17:00", "20:00"],
     createdAt: new Date(Date.now() - 12 * 86400000).toISOString(),
     completions: Array.from({ length: 12 }, (_, i) =>
       todayKey(new Date(Date.now() - (i + 1) * 86400000)),
@@ -46,7 +49,7 @@ const SEED: Habit[] = [
     name: "Kitap Oku",
     microGoal: "Mikro: Sadece 2 sayfa",
     category: "gelisim",
-    reminder: "22:30",
+    reminders: ["22:30"],
     createdAt: new Date(Date.now() - 30 * 86400000).toISOString(),
     completions: [todayKey(), ...Array.from({ length: 8 }, (_, i) => todayKey(new Date(Date.now() - (i + 1) * 86400000)))],
   },
@@ -55,7 +58,7 @@ const SEED: Habit[] = [
     name: "Meditasyon",
     microGoal: "5 Dakika nefes",
     category: "saglik",
-    reminder: "08:30",
+    reminders: ["08:30"],
     createdAt: new Date(Date.now() - 5 * 86400000).toISOString(),
     completions: Array.from({ length: 3 }, (_, i) => todayKey(new Date(Date.now() - (i + 1) * 86400000))),
   },
@@ -252,4 +255,34 @@ export const MICRO_TIPS = [
 export function todaysTip(): string {
   const idx = new Date().getDate() % MICRO_TIPS.length;
   return MICRO_TIPS[idx];
+}
+
+/** Hatırlatıcı saatlerini normalize eder (eski `reminder` alanını da kapsar). */
+export function getReminderTimes(h: Habit): string[] {
+  if (h.reminders && h.reminders.length > 0) return h.reminders;
+  if (h.reminder) return [h.reminder];
+  return [];
+}
+
+/** Verilen sayıda hatırlatıcıyı 09:00 - 21:00 arasında eşit dağıtır. */
+export function defaultReminderTimes(count: number): string[] {
+  if (count <= 0) return [];
+  const startMin = 9 * 60;
+  const endMin = 21 * 60;
+  const out: string[] = [];
+  if (count === 1) {
+    out.push(formatMinutes(Math.round((startMin + endMin) / 2)));
+    return out;
+  }
+  const step = (endMin - startMin) / (count - 1);
+  for (let i = 0; i < count; i++) {
+    out.push(formatMinutes(Math.round(startMin + i * step)));
+  }
+  return out;
+}
+
+function formatMinutes(total: number): string {
+  const h = Math.floor(total / 60) % 24;
+  const m = total % 60;
+  return `${String(h).padStart(2, "0")}:${String(m).padStart(2, "0")}`;
 }
