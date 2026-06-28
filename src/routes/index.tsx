@@ -50,6 +50,7 @@ import {
 } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/lib/theme";
+import { BADGE_DAYS, badgeProgress, earnedBadgeCount } from "@/lib/badges";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -88,7 +89,7 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
   const [filter, setFilter] = useState<Category | "all">("all");
-  const [view, setView] = useState<"home" | "stats">("home");
+  const [view, setView] = useState<"home" | "stats" | "badges">("home");
   const [open, setOpen] = useState(false);
 
   const visible = useMemo(
@@ -104,7 +105,7 @@ function Index() {
     [habits],
   );
   const badgesEarned = useMemo(
-    () => habits.filter((h) => currentStreak(h) >= 7).length,
+    () => earnedBadgeCount(habits),
     [habits],
   );
 
@@ -215,8 +216,10 @@ function Index() {
             </div>
           </div>
         </>
-      ) : (
+      ) : view === "stats" ? (
         <StatsView habits={habits} />
+      ) : (
+        <BadgesView habits={habits} />
       )}
 
       {/* Add Habit Dialog */}
@@ -244,7 +247,7 @@ function Index() {
         >
           <Plus className="size-5" />
         </button>
-        <NavBtn onClick={() => setView("home")} aria-label="Rozetler">
+        <NavBtn active={view === "badges"} onClick={() => setView("badges")} aria-label="Rozetler">
           <Award className="size-5" />
         </NavBtn>
         <NavBtn onClick={() => setView("home")} aria-label="Profil">
@@ -518,6 +521,107 @@ function StatsView({ habits }: { habits: Habit[] }) {
         })
       )}
     </section>
+  );
+}
+
+function BadgesView({ habits }: { habits: Habit[] }) {
+  const progress = badgeProgress(habits);
+  const earned = progress.filter((p) => p.earned);
+  const locked = progress.filter((p) => !p.earned);
+  return (
+    <section className="space-y-6 animate-in">
+      <div className="p-5 bg-primary text-primary-foreground rounded-[2rem] shadow-lg shadow-primary/20 flex items-center justify-between">
+        <div>
+          <p className="text-[10px] font-mono uppercase opacity-80">Toplam Rozet</p>
+          <p className="text-4xl font-extrabold tracking-tighter leading-none mt-1">
+            {earned.length}
+            <span className="text-lg opacity-70">/{progress.length}</span>
+          </p>
+          <p className="text-xs mt-2 opacity-90">Her rozet {BADGE_DAYS} günlük zincirle kazanılır.</p>
+        </div>
+        <Award className="size-12 opacity-90" />
+      </div>
+
+      <div>
+        <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
+          Kazanılan Rozetler
+        </h2>
+        {earned.length === 0 ? (
+          <div className="p-5 bg-card rounded-[1.5rem] border text-sm text-muted-foreground">
+            Henüz rozet yok. {BADGE_DAYS} gün üst üste sürdürdüğün ilk alışkanlık ilk rozetini açacak.
+          </div>
+        ) : (
+          <div className="grid grid-cols-2 gap-3">
+            {earned.map((p) => (
+              <BadgeCard key={p.badge.id} progress={p} />
+            ))}
+          </div>
+        )}
+      </div>
+
+      <div>
+        <h2 className="text-xs font-mono uppercase tracking-widest text-muted-foreground mb-3">
+          Yolda Olanlar
+        </h2>
+        <div className="grid grid-cols-2 gap-3">
+          {locked.map((p) => (
+            <BadgeCard key={p.badge.id} progress={p} />
+          ))}
+        </div>
+      </div>
+    </section>
+  );
+}
+
+function BadgeCard({ progress }: { progress: ReturnType<typeof badgeProgress>[number] }) {
+  const pct = Math.min(100, Math.round((progress.bestStreak / BADGE_DAYS) * 100));
+  return (
+    <div
+      className={cn(
+        "p-4 rounded-[1.5rem] border flex flex-col gap-2 transition-all",
+        progress.earned
+          ? "bg-accent/20 border-accent/40"
+          : "bg-card opacity-90",
+      )}
+    >
+      <div className="flex items-start justify-between">
+        <div
+          className={cn(
+            "size-11 rounded-2xl flex items-center justify-center text-2xl",
+            progress.earned ? "bg-accent/40" : "bg-secondary grayscale",
+          )}
+        >
+          <span aria-hidden>{progress.badge.emoji}</span>
+        </div>
+        {progress.earned ? (
+          <span className="text-[9px] font-mono uppercase bg-primary text-primary-foreground px-2 py-0.5 rounded-full">
+            Açıldı
+          </span>
+        ) : (
+          <span className="text-[9px] font-mono uppercase text-muted-foreground">
+            {progress.bestStreak}/{BADGE_DAYS}
+          </span>
+        )}
+      </div>
+      <h3 className="font-semibold text-sm leading-tight">{progress.badge.title}</h3>
+      <p className="text-[11px] text-muted-foreground leading-snug">
+        {progress.badge.description}
+      </p>
+      {!progress.earned && (
+        <div className="h-1.5 bg-secondary rounded-full overflow-hidden mt-1">
+          <div
+            className="h-full bg-primary transition-all"
+            style={{ width: `${pct}%` }}
+          />
+        </div>
+      )}
+      {progress.sourceHabit && (
+        <p className="text-[10px] font-mono text-muted-foreground truncate">
+          {progress.earned ? "✓ " : "→ "}
+          {progress.sourceHabit}
+        </p>
+      )}
+    </div>
   );
 }
 
