@@ -36,7 +36,9 @@ import {
   type Habit,
   currentStreak,
   dailyRates,
+  defaultReminderTimes,
   formatToday,
+  getReminderTimes,
   greeting,
   last7Days,
   monthlyCompletionRate,
@@ -338,6 +340,13 @@ function HabitCard({
   const Icon = pickIcon(habit.name);
   const CatIcon = ICONS_FOR_CATEGORY[habit.category];
   const streak = currentStreak(habit);
+  const reminders = getReminderTimes(habit);
+  const reminderLabel =
+    reminders.length === 0
+      ? ""
+      : reminders.length === 1
+        ? reminders[0]
+        : `${reminders.length}× ${reminders.join(" · ")}`;
 
   return (
     <div
@@ -359,7 +368,7 @@ function HabitCard({
             <CatIcon className="size-3 text-muted-foreground" />
             <p className="text-xs text-muted-foreground truncate">
               {habit.microGoal}
-              {habit.reminder ? ` • ${habit.reminder}` : ""}
+              {reminderLabel ? ` • 🔔 ${reminderLabel}` : ""}
             </p>
           </div>
           {streak > 0 && (
