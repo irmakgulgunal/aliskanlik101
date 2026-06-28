@@ -50,6 +50,7 @@ import {
 } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/lib/theme";
+import { BADGE_DAYS, badgeProgress, earnedBadgeCount } from "@/lib/badges";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -88,7 +89,7 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
   const [filter, setFilter] = useState<Category | "all">("all");
-  const [view, setView] = useState<"home" | "stats">("home");
+  const [view, setView] = useState<"home" | "stats" | "badges">("home");
   const [open, setOpen] = useState(false);
 
   const visible = useMemo(
@@ -104,7 +105,7 @@ function Index() {
     [habits],
   );
   const badgesEarned = useMemo(
-    () => habits.filter((h) => currentStreak(h) >= 7).length,
+    () => earnedBadgeCount(habits),
     [habits],
   );
 
@@ -215,8 +216,10 @@ function Index() {
             </div>
           </div>
         </>
-      ) : (
+      ) : view === "stats" ? (
         <StatsView habits={habits} />
+      ) : (
+        <BadgesView habits={habits} />
       )}
 
       {/* Add Habit Dialog */}
@@ -244,7 +247,7 @@ function Index() {
         >
           <Plus className="size-5" />
         </button>
-        <NavBtn onClick={() => setView("home")} aria-label="Rozetler">
+        <NavBtn active={view === "badges"} onClick={() => setView("badges")} aria-label="Rozetler">
           <Award className="size-5" />
         </NavBtn>
         <NavBtn onClick={() => setView("home")} aria-label="Profil">
