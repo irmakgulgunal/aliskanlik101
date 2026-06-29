@@ -35,6 +35,7 @@ import {
   CATEGORIES,
   type Category,
   type Habit,
+  STORAGE_KEY,
   currentStreak,
   dailyRates,
   defaultReminderTimes,
