@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import {
   Award,
   BarChart3,
-  Bell,
   Book,
   Brain,
   Briefcase,
@@ -15,6 +14,8 @@ import {
   Monitor,
   Moon,
   Plus,
+  RotateCcw,
+  Settings as SettingsIcon,
   Sparkles,
   Sun,
   Trash2,
@@ -52,6 +53,7 @@ import {
 } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/lib/theme";
+import { ACCENTS, useAccent } from "@/lib/accent";
 import { BADGE_DAYS, badgeProgress, earnedBadgeCount } from "@/lib/badges";
 
 export const Route = createFileRoute("/")({
@@ -90,8 +92,9 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
+  useAccent();
   const [filter, setFilter] = useState<Category | "all">("all");
-  const [view, setView] = useState<"home" | "stats" | "badges">("home");
+  const [view, setView] = useState<"home" | "stats" | "badges" | "settings">("home");
   const [open, setOpen] = useState(false);
 
   const visible = useMemo(
@@ -125,9 +128,18 @@ function Index() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-            <Bell className="size-5 text-primary" />
-          </div>
+          <button
+            onClick={() => setView("settings")}
+            aria-label="Ayarlar"
+            className={cn(
+              "size-10 rounded-2xl flex items-center justify-center transition-colors border",
+              view === "settings"
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-card text-foreground/80 hover:text-foreground",
+            )}
+          >
+            <SettingsIcon className="size-5" />
+          </button>
         </div>
       </header>
 
@@ -220,8 +232,10 @@ function Index() {
         </>
       ) : view === "stats" ? (
         <StatsView habits={habits} />
-      ) : (
+      ) : view === "badges" ? (
         <BadgesView habits={habits} />
+      ) : (
+        <SettingsView />
       )}
 
       {/* Add Habit Dialog */}
@@ -772,5 +786,132 @@ function AddHabitDialog({
         </DialogFooter>
       </DialogContent>
     </Dialog>
+  );
+}
+
+function SettingsView() {
+  const { accent, setAccent } = useAccent();
+  const { theme, setTheme } = useTheme();
+  const [confirming, setConfirming] = useState(false);
+
+  const reset = () => {
+    if (typeof window === "undefined") return;
+    try {
+      window.localStorage.removeItem("zincir.habits.v1");
+      window.localStorage.removeItem("zincir.theme");
+      window.localStorage.removeItem("zincir.accent");
+    } catch {}
+    window.location.reload();
+  };
+
+  const themeOptions: { id: Theme; label: string }[] = [
+    { id: "light", label: "Aydınlık" },
+    { id: "dark", label: "Karanlık" },
+    { id: "system", label: "Sistem" },
+  ];
+
+  return (
+    <section className="space-y-6 animate-in">
+      <div>
+        <h2 className="text-xl font-extrabold tracking-tight mb-1">Ayarlar</h2>
+        <p className="text-sm text-muted-foreground">Görünümü kişiselleştir veya uygulamayı sıfırla.</p>
+      </div>
+
+      {/* Accent color */}
+      <div className="p-5 bg-card rounded-[2rem] border">
+        <h3 className="text-sm font-semibold mb-1">Vurgu Rengi</h3>
+        <p className="text-xs text-muted-foreground mb-4">Arka plan ve butonlar bu renge göre değişir.</p>
+        <div className="grid grid-cols-3 gap-3">
+          {ACCENTS.map((a) => {
+            const active = accent === a.id;
+            return (
+              <button
+                key={a.id}
+                onClick={() => setAccent(a.id)}
+                aria-label={a.label}
+                aria-pressed={active}
+                className={cn(
+                  "group flex flex-col items-center gap-2 p-3 rounded-2xl border transition-all",
+                  active ? "border-foreground/40 bg-secondary" : "border-transparent hover:bg-secondary/50",
+                )}
+              >
+                <span
+                  className={cn(
+                    "size-10 rounded-full shadow-sm flex items-center justify-center",
+                    active && "ring-2 ring-offset-2 ring-offset-card ring-foreground/40",
+                  )}
+                  style={{ background: a.swatch }}
+                >
+                  {active && <Check className="size-4 text-white" strokeWidth={3} />}
+                </span>
+                <span className="text-xs font-medium">{a.label}</span>
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Theme */}
+      <div className="p-5 bg-card rounded-[2rem] border">
+        <h3 className="text-sm font-semibold mb-1">Tema</h3>
+        <p className="text-xs text-muted-foreground mb-4">Aydınlık, karanlık veya cihazına uy.</p>
+        <div className="grid grid-cols-3 gap-2">
+          {themeOptions.map((o) => {
+            const Icon = o.id === "light" ? Sun : o.id === "dark" ? Moon : Monitor;
+            const active = theme === o.id;
+            return (
+              <button
+                key={o.id}
+                onClick={() => setTheme(o.id)}
+                className={cn(
+                  "flex flex-col items-center gap-1.5 py-3 rounded-2xl border text-xs font-medium transition-colors",
+                  active
+                    ? "bg-foreground text-background border-transparent"
+                    : "bg-secondary border-transparent text-foreground/70 hover:text-foreground",
+                )}
+              >
+                <Icon className="size-4" />
+                {o.label}
+              </button>
+            );
+          })}
+        </div>
+      </div>
+
+      {/* Reset */}
+      <div className="p-5 bg-card rounded-[2rem] border">
+        <h3 className="text-sm font-semibold mb-1">Uygulamayı Sıfırla</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Tüm alışkanlıkların, zincirlerin ve tercihlerin silinir. Bu işlem geri alınamaz.
+        </p>
+        {!confirming ? (
+          <button
+            onClick={() => setConfirming(true)}
+            className="w-full flex items-center justify-center gap-2 bg-destructive/10 text-destructive border border-destructive/20 rounded-full py-3 text-sm font-semibold hover:bg-destructive/15 transition-colors"
+          >
+            <RotateCcw className="size-4" />
+            Uygulamayı sıfırla
+          </button>
+        ) : (
+          <div className="space-y-2">
+            <p className="text-xs text-center font-semibold text-destructive">Emin misin? Bu işlem geri alınamaz.</p>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={() => setConfirming(false)}
+                className="bg-secondary rounded-full py-3 text-sm font-semibold"
+              >
+                Vazgeç
+              </button>
+              <button
+                onClick={reset}
+                className="bg-destructive text-destructive-foreground rounded-full py-3 text-sm font-semibold active:scale-95 transition-transform"
+              >
+                Evet, sıfırla
+              </button>
+            </div>
+          </div>
+        )}
+      </div>
+    </section>
   );
 }
