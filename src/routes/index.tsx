@@ -3,7 +3,6 @@ import { useMemo, useState } from "react";
 import {
   Award,
   BarChart3,
-  Bell,
   Book,
   Brain,
   Briefcase,
