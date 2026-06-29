@@ -421,9 +421,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       <div className="size-12 mx-auto bg-accent/30 rounded-2xl flex items-center justify-center mb-3">
         <Sparkles className="size-5 text-accent-foreground" />
       </div>
-      <h3 className="font-semibold mb-1">Henüz alışkanlık yok</h3>
+      <h3 className="font-semibold mb-1">Hoş geldin.</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Küçük bir adımla başla. Günde 2 sayfa kitap, 1 bardak su.
+        Hayatını daha verimli hale getirmek için alışkanlık ekle.
       </p>
       <button
         onClick={onAdd}
