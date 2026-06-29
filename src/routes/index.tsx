@@ -798,9 +798,10 @@ function SettingsView() {
   const reset = () => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.removeItem("zincir.habits.v1");
+      window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.removeItem("zincir.theme");
       window.localStorage.removeItem("zincir.accent");
+      window.localStorage.setItem(STORAGE_KEY, "[]");
     } catch {}
     window.location.reload();
   };
