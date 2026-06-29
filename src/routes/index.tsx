@@ -252,9 +252,6 @@ function Index() {
         <NavBtn active={view === "badges"} onClick={() => setView("badges")} aria-label="Rozetler">
           <Award className="size-5" />
         </NavBtn>
-        <NavBtn onClick={() => setView("home")} aria-label="Profil">
-          <Heart className="size-5" />
-        </NavBtn>
       </nav>
     </div>
   );
