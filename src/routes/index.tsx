@@ -93,6 +93,7 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
+  useAccent();
   const [filter, setFilter] = useState<Category | "all">("all");
   const [view, setView] = useState<"home" | "stats" | "badges" | "settings">("home");
   const [open, setOpen] = useState(false);
