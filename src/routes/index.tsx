@@ -15,6 +15,8 @@ import {
   Monitor,
   Moon,
   Plus,
+  RotateCcw,
+  Settings as SettingsIcon,
   Sparkles,
   Sun,
   Trash2,
@@ -52,6 +54,7 @@ import {
 } from "@/lib/habits";
 import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/lib/theme";
+import { ACCENTS, useAccent } from "@/lib/accent";
 import { BADGE_DAYS, badgeProgress, earnedBadgeCount } from "@/lib/badges";
 
 export const Route = createFileRoute("/")({
@@ -91,7 +94,7 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
   const [filter, setFilter] = useState<Category | "all">("all");
-  const [view, setView] = useState<"home" | "stats" | "badges">("home");
+  const [view, setView] = useState<"home" | "stats" | "badges" | "settings">("home");
   const [open, setOpen] = useState(false);
 
   const visible = useMemo(
@@ -125,9 +128,18 @@ function Index() {
         </div>
         <div className="flex items-center gap-2">
           <ThemeToggle />
-          <div className="size-10 rounded-2xl bg-primary/10 flex items-center justify-center ring-1 ring-primary/20">
-            <Bell className="size-5 text-primary" />
-          </div>
+          <button
+            onClick={() => setView("settings")}
+            aria-label="Ayarlar"
+            className={cn(
+              "size-10 rounded-2xl flex items-center justify-center transition-colors border",
+              view === "settings"
+                ? "bg-primary text-primary-foreground border-transparent"
+                : "bg-card text-foreground/80 hover:text-foreground",
+            )}
+          >
+            <SettingsIcon className="size-5" />
+          </button>
         </div>
       </header>
 
@@ -220,8 +232,10 @@ function Index() {
         </>
       ) : view === "stats" ? (
         <StatsView habits={habits} />
-      ) : (
+      ) : view === "badges" ? (
         <BadgesView habits={habits} />
+      ) : (
+        <SettingsView />
       )}
 
       {/* Add Habit Dialog */}
