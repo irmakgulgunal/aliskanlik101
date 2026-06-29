@@ -35,6 +35,7 @@ import {
   CATEGORIES,
   type Category,
   type Habit,
+  STORAGE_KEY,
   currentStreak,
   dailyRates,
   defaultReminderTimes,
@@ -420,9 +421,9 @@ function EmptyState({ onAdd }: { onAdd: () => void }) {
       <div className="size-12 mx-auto bg-accent/30 rounded-2xl flex items-center justify-center mb-3">
         <Sparkles className="size-5 text-accent-foreground" />
       </div>
-      <h3 className="font-semibold mb-1">Henüz alışkanlık yok</h3>
+      <h3 className="font-semibold mb-1">Hoş geldin.</h3>
       <p className="text-sm text-muted-foreground mb-4">
-        Küçük bir adımla başla. Günde 2 sayfa kitap, 1 bardak su.
+        Hayatını daha verimli hale getirmek için alışkanlık ekle.
       </p>
       <button
         onClick={onAdd}
@@ -797,9 +798,10 @@ function SettingsView() {
   const reset = () => {
     if (typeof window === "undefined") return;
     try {
-      window.localStorage.removeItem("zincir.habits.v1");
+      window.localStorage.removeItem(STORAGE_KEY);
       window.localStorage.removeItem("zincir.theme");
       window.localStorage.removeItem("zincir.accent");
+      window.localStorage.setItem(STORAGE_KEY, "[]");
     } catch {}
     window.location.reload();
   };

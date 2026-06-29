@@ -21,7 +21,7 @@ export type Habit = {
   completions: string[]; // YYYY-MM-DD list
 };
 
-const STORAGE_KEY = "zincir.habits.v1";
+export const STORAGE_KEY = "zincir.habits.v1";
 
 export const todayKey = (d = new Date()) => {
   const y = d.getFullYear();
