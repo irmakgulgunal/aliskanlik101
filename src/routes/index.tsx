@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import {
   Award,
   BarChart3,
+  Bell,
+  BellOff,
   Book,
   Brain,
   Briefcase,
@@ -56,6 +58,7 @@ import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/lib/theme";
 import { ACCENTS, useAccent } from "@/lib/accent";
 import { BADGE_DAYS, badgeProgress, earnedBadgeCount } from "@/lib/badges";
+import { useNotifications } from "@/lib/notifications";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -94,6 +97,7 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
   useAccent();
+  useNotifications(habits);
   const [filter, setFilter] = useState<Category | "all">("all");
   const [view, setView] = useState<"home" | "stats" | "badges" | "settings">("home");
   const [open, setOpen] = useState(false);
@@ -236,7 +240,7 @@ function Index() {
       ) : view === "badges" ? (
         <BadgesView habits={habits} />
       ) : (
-        <SettingsView />
+        <SettingsView habits={habits} />
       )}
 
       {/* Add Habit Dialog */}
