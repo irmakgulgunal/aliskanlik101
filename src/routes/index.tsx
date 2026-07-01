@@ -794,9 +794,10 @@ function AddHabitDialog({
   );
 }
 
-function SettingsView() {
+function SettingsView({ habits }: { habits: Habit[] }) {
   const { accent, setAccent } = useAccent();
   const { theme, setTheme } = useTheme();
+  const { enabled, permission, enable, disable, testNotification } = useNotifications(habits);
   const [confirming, setConfirming] = useState(false);
 
   const reset = () => {
