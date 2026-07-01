@@ -1,0 +1,14 @@
+{
+  "name": "Zincir — Alışkanlık Takibi",
+  "short_name": "Zincir",
+  "description": "Mikro alışkanlıklarla başla, zincirini koru.",
+  "start_url": "/",
+  "scope": "/",
+  "display": "standalone",
+  "orientation": "portrait",
+  "background_color": "#1a1410",
+  "theme_color": "#e08a3c",
+  "icons": [
+    { "src": "/favicon.ico", "sizes": "64x64", "type": "image/x-icon" }
+  ]
+}
