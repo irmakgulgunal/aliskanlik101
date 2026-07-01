@@ -1,9 +1,9 @@
-// Zincir service worker: enables background reminder notifications.
-// Persists the reminder schedule in Cache Storage so it survives SW restarts.
+// Zincir service worker — Web Push + in-tab fallback
+// Uygulama kapalıyken Supabase'den gelen push mesajlarını karşılar.
 
 const CACHE_NAME = "zincir-state-v1";
 const SCHEDULE_URL = "/__zincir__/schedule.json";
-const FIRED_URL = "/__zincir__/fired.json";
+const FIRED_URL    = "/__zincir__/fired.json";
 
 const MOTIVATION = [
   "Bugün küçük bir adım, yarın büyük bir zincir. Hadi başla!",
@@ -21,11 +21,13 @@ const MOTIVATION = [
 function pickMessage(habit) {
   const streak = habit.streak || 0;
   if (streak >= 21) return `${streak} gündür süren zincirini bugün de büyüt.`;
-  if (streak >= 7) return `${streak} günlük zincirini kırma — sen yaparsın!`;
-  if (streak >= 3) return `${streak} gündür ara vermedin. Bugün de devam!`;
+  if (streak >= 7)  return `${streak} günlük zincirini kırma — sen yaparsın!`;
+  if (streak >= 3)  return `${streak} gündür ara vermedin. Bugün de devam!`;
   if (habit.microGoal) return habit.microGoal;
   return MOTIVATION[Math.floor(Math.random() * MOTIVATION.length)];
 }
+
+// ─── Cache helpers ──────────────────────────────────────────────────────────
 
 async function readJSON(url, fallback) {
   try {
@@ -33,14 +35,14 @@ async function readJSON(url, fallback) {
     const res = await cache.match(url);
     if (!res) return fallback;
     return await res.json();
-  } catch {
-    return fallback;
-  }
+  } catch { return fallback; }
 }
 
 async function writeJSON(url, data) {
   const cache = await caches.open(CACHE_NAME);
-  await cache.put(url, new Response(JSON.stringify(data), { headers: { "content-type": "application/json" } }));
+  await cache.put(url, new Response(JSON.stringify(data), {
+    headers: { "content-type": "application/json" },
+  }));
 }
 
 function todayKey(d = new Date()) {
@@ -49,6 +51,8 @@ function todayKey(d = new Date()) {
   const day = String(d.getDate()).padStart(2, "0");
   return `${y}-${m}-${day}`;
 }
+
+// ─── In-tab schedule check (fallback for when push is not available) ─────────
 
 async function checkAndFire() {
   const schedule = await readJSON(SCHEDULE_URL, { habits: [] });
@@ -62,12 +66,11 @@ async function checkAndFire() {
     if ((habit.completedDates || []).includes(todayKey())) continue;
     for (let i = 0; i < (habit.times || []).length; i++) {
       const t = habit.times[i];
-      const m = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim());
-      if (!m) continue;
-      const reminderMin = Number(m[1]) * 60 + Number(m[2]);
+      const mt = /^(\d{1,2}):(\d{2})$/.exec(String(t).trim());
+      if (!mt) continue;
+      const reminderMin = Number(mt[1]) * 60 + Number(mt[2]);
       const key = `${habit.id}@${t}#${i}`;
       if (fired.ids.includes(key)) continue;
-      // Fire if we're at or past the reminder time, within a 90-minute window (in case sync was delayed)
       const diff = nowMin - reminderMin;
       if (diff < 0 || diff > 90) continue;
       await self.registration.showNotification(`⏰ ${habit.name}`, {
@@ -84,13 +87,35 @@ async function checkAndFire() {
   await writeJSON(FIRED_URL, fired);
 }
 
-self.addEventListener("install", (event) => {
-  self.skipWaiting();
+// ─── Web Push event (uygulama kapalıyken Supabase'den gelir) ─────────────────
+
+self.addEventListener("push", (event) => {
+  let data = { title: "Zincir", body: "Alışkanlığını unutma! 🔥", habitId: null };
+  try {
+    if (event.data) data = { ...data, ...event.data.json() };
+  } catch {
+    if (event.data) data.body = event.data.text();
+  }
+
+  event.waitUntil(
+    self.registration.showNotification(data.title || "Zincir", {
+      body: data.body,
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      tag: data.habitId ? `zincir-push-${data.habitId}` : "zincir-push",
+      data: { url: "/", habitId: data.habitId },
+      requireInteraction: false,
+      vibrate: [200, 100, 200],
+    })
+  );
 });
 
-self.addEventListener("activate", (event) => {
-  event.waitUntil(self.clients.claim());
-});
+// ─── Lifecycle ───────────────────────────────────────────────────────────────
+
+self.addEventListener("install",  () => self.skipWaiting());
+self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
+
+// ─── Messages from the page ──────────────────────────────────────────────────
 
 self.addEventListener("message", (event) => {
   const msg = event.data || {};
@@ -111,17 +136,17 @@ self.addEventListener("message", (event) => {
   }
 });
 
-self.addEventListener("periodicsync", (event) => {
-  if (event.tag === "zincir-check") {
-    event.waitUntil(checkAndFire());
-  }
+// ─── Background sync (PWA kuruluysa) ─────────────────────────────────────────
+
+self.addEventListener("periodicsync", (e) => {
+  if (e.tag === "zincir-check") e.waitUntil(checkAndFire());
 });
 
-self.addEventListener("sync", (event) => {
-  if (event.tag === "zincir-check") {
-    event.waitUntil(checkAndFire());
-  }
+self.addEventListener("sync", (e) => {
+  if (e.tag === "zincir-check") e.waitUntil(checkAndFire());
 });
+
+// ─── Bildirime tıklanınca uygulamayı aç ──────────────────────────────────────
 
 self.addEventListener("notificationclick", (event) => {
   event.notification.close();
