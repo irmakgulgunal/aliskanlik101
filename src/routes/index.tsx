@@ -3,6 +3,8 @@ import { useMemo, useState } from "react";
 import {
   Award,
   BarChart3,
+  Bell,
+  BellOff,
   Book,
   Brain,
   Briefcase,
@@ -56,6 +58,7 @@ import { cn } from "@/lib/utils";
 import { useTheme, type Theme } from "@/lib/theme";
 import { ACCENTS, useAccent } from "@/lib/accent";
 import { BADGE_DAYS, badgeProgress, earnedBadgeCount } from "@/lib/badges";
+import { useNotifications } from "@/lib/notifications";
 
 export const Route = createFileRoute("/")({
   head: () => ({
@@ -94,6 +97,7 @@ function pickIcon(name: string): React.ComponentType<{ className?: string }> {
 function Index() {
   const { habits, toggleToday, addHabit, removeHabit } = useHabits();
   useAccent();
+  useNotifications(habits);
   const [filter, setFilter] = useState<Category | "all">("all");
   const [view, setView] = useState<"home" | "stats" | "badges" | "settings">("home");
   const [open, setOpen] = useState(false);
@@ -236,7 +240,7 @@ function Index() {
       ) : view === "badges" ? (
         <BadgesView habits={habits} />
       ) : (
-        <SettingsView />
+        <SettingsView habits={habits} />
       )}
 
       {/* Add Habit Dialog */}
@@ -790,9 +794,10 @@ function AddHabitDialog({
   );
 }
 
-function SettingsView() {
+function SettingsView({ habits }: { habits: Habit[] }) {
   const { accent, setAccent } = useAccent();
   const { theme, setTheme } = useTheme();
+  const { enabled, permission, enable, disable, testNotification } = useNotifications(habits);
   const [confirming, setConfirming] = useState(false);
 
   const reset = () => {
@@ -881,6 +886,49 @@ function SettingsView() {
       </div>
 
       {/* Reset */}
+      {/* Notifications */}
+      <div className="p-5 bg-card rounded-[2rem] border">
+        <h3 className="text-sm font-semibold mb-1">Bildirimler</h3>
+        <p className="text-xs text-muted-foreground mb-4">
+          Alışkanlıklarına ayarladığın saatlerde tarayıcı bildirimi al. Uygulama açık (veya arka planda sekme olarak) olmalıdır.
+        </p>
+        {permission === "unsupported" ? (
+          <p className="text-xs text-destructive">Bu tarayıcı bildirimleri desteklemiyor.</p>
+        ) : permission === "denied" ? (
+          <p className="text-xs text-destructive">
+            Bildirim izni reddedildi. Tarayıcı site ayarlarından izin vermelisin.
+          </p>
+        ) : enabled && permission === "granted" ? (
+          <div className="space-y-2">
+            <div className="flex items-center gap-2 text-xs font-mono text-primary">
+              <Bell className="size-4" /> Bildirimler açık
+            </div>
+            <div className="grid grid-cols-2 gap-2">
+              <button
+                onClick={testNotification}
+                className="bg-secondary rounded-full py-3 text-sm font-semibold active:scale-95 transition-transform"
+              >
+                Test bildirimi
+              </button>
+              <button
+                onClick={disable}
+                className="bg-secondary rounded-full py-3 text-sm font-semibold flex items-center justify-center gap-2 active:scale-95 transition-transform"
+              >
+                <BellOff className="size-4" /> Kapat
+              </button>
+            </div>
+          </div>
+        ) : (
+          <button
+            onClick={enable}
+            className="w-full flex items-center justify-center gap-2 bg-primary text-primary-foreground rounded-full py-3 text-sm font-semibold active:scale-95 transition-transform"
+          >
+            <Bell className="size-4" />
+            Bildirimleri aç
+          </button>
+        )}
+      </div>
+
       <div className="p-5 bg-card rounded-[2rem] border">
         <h3 className="text-sm font-semibold mb-1">Uygulamayı Sıfırla</h3>
         <p className="text-xs text-muted-foreground mb-4">
