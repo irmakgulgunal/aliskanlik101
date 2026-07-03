@@ -797,7 +797,7 @@ function AddHabitDialog({
 function SettingsView({ habits }: { habits: Habit[] }) {
   const { accent, setAccent } = useAccent();
   const { theme, setTheme } = useTheme();
-  const { enabled, permission, enable, disable, testNotification } = useNotifications(habits);
+  const { enabled, permission, enable, disable, testNotification, maxPerDay, setMaxPerDay } = useNotifications(habits);
   const [confirming, setConfirming] = useState(false);
 
   const reset = () => {
@@ -902,6 +902,35 @@ function SettingsView({ habits }: { habits: Habit[] }) {
           <div className="space-y-2">
             <div className="flex items-center gap-2 text-xs font-mono text-primary">
               <Bell className="size-4" /> Bildirimler açık
+            </div>
+            <div className="pt-2">
+              <label className="text-xs font-semibold text-foreground/80 block mb-2">
+                Günlük bildirim sınırı
+              </label>
+              <div className="grid grid-cols-6 gap-1.5">
+                {[0, 1, 2, 3, 5, 10].map((n) => {
+                  const active = maxPerDay === n;
+                  return (
+                    <button
+                      key={n}
+                      onClick={() => setMaxPerDay(n)}
+                      className={cn(
+                        "py-2 rounded-xl text-xs font-semibold transition-colors",
+                        active
+                          ? "bg-foreground text-background"
+                          : "bg-secondary text-foreground/70 hover:text-foreground",
+                      )}
+                    >
+                      {n === 0 ? "∞" : n}
+                    </button>
+                  );
+                })}
+              </div>
+              <p className="text-[11px] text-muted-foreground mt-2">
+                {maxPerDay === 0
+                  ? "Sınırsız: her hatırlatma saatinde bildirim gelir."
+                  : `Günde en fazla ${maxPerDay} bildirim. Sınıra ulaşınca sonrakiler yarına ertelenmez, atlanır.`}
+              </p>
             </div>
             <div className="grid grid-cols-2 gap-2">
               <button

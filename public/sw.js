@@ -55,13 +55,15 @@ function todayKey(d = new Date()) {
 // ─── In-tab schedule check (fallback for when push is not available) ─────────
 
 async function checkAndFire() {
-  const schedule = await readJSON(SCHEDULE_URL, { habits: [] });
+  const schedule = await readJSON(SCHEDULE_URL, { habits: [], maxPerDay: 0 });
   let fired = await readJSON(FIRED_URL, { date: todayKey(), ids: [] });
   if (fired.date !== todayKey()) fired = { date: todayKey(), ids: [] };
 
   const now = new Date();
   const nowMin = now.getHours() * 60 + now.getMinutes();
+  const maxPerDay = Number(schedule.maxPerDay) || 0;
 
+  const pending = [];
   for (const habit of schedule.habits || []) {
     if ((habit.completedDates || []).includes(todayKey())) continue;
     for (let i = 0; i < (habit.times || []).length; i++) {
@@ -72,17 +74,24 @@ async function checkAndFire() {
       const key = `${habit.id}@${t}#${i}`;
       if (fired.ids.includes(key)) continue;
       const diff = nowMin - reminderMin;
-      if (diff < 0 || diff > 90) continue;
-      await self.registration.showNotification(`⏰ ${habit.name}`, {
-        body: pickMessage(habit),
-        icon: "/favicon.ico",
-        badge: "/favicon.ico",
-        tag: `zincir-${habit.id}-${t}`,
-        data: { url: "/", habitId: habit.id },
-        requireInteraction: false,
-      });
-      fired.ids.push(key);
+      // Sadece son ~20 dk içindeki bildirimler (saatine yakın olsun).
+      if (diff < -1 || diff > 20) continue;
+      pending.push({ habit, t, key, reminderMin });
     }
+  }
+  pending.sort((a, b) => a.reminderMin - b.reminderMin);
+
+  for (const p of pending) {
+    if (maxPerDay > 0 && fired.ids.length >= maxPerDay) break;
+    await self.registration.showNotification(`⏰ ${p.habit.name}`, {
+      body: pickMessage(p.habit),
+      icon: "/favicon.ico",
+      badge: "/favicon.ico",
+      tag: `zincir-${p.habit.id}-${p.t}`,
+      data: { url: "/", habitId: p.habit.id },
+      requireInteraction: false,
+    });
+    fired.ids.push(p.key);
   }
   await writeJSON(FIRED_URL, fired);
 }
@@ -120,7 +129,7 @@ self.addEventListener("activate", (e) => e.waitUntil(self.clients.claim()));
 self.addEventListener("message", (event) => {
   const msg = event.data || {};
   if (msg.type === "SET_SCHEDULE") {
-    event.waitUntil(writeJSON(SCHEDULE_URL, { habits: msg.habits || [] }));
+    event.waitUntil(writeJSON(SCHEDULE_URL, { habits: msg.habits || [], maxPerDay: Number(msg.maxPerDay) || 0 }));
   } else if (msg.type === "CHECK_NOW") {
     event.waitUntil(checkAndFire());
   } else if (msg.type === "RESET_FIRED") {

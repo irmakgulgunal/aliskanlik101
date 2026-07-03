@@ -6,6 +6,22 @@ import { currentStreak, getReminderTimes, todayKey, type Habit } from "./habits"
 const ENABLED_KEY   = "zincir.notifications.enabled";
 const FIRED_KEY     = "zincir.notifications.fired";
 const DEVICE_ID_KEY = "zincir.device.id";
+const MAX_PER_DAY_KEY = "zincir.notifications.maxPerDay";
+const DEFAULT_MAX_PER_DAY = 0; // 0 = sınırsız
+
+export function loadMaxPerDay(): number {
+  if (typeof window === "undefined") return DEFAULT_MAX_PER_DAY;
+  try {
+    const raw = localStorage.getItem(MAX_PER_DAY_KEY);
+    if (raw == null) return DEFAULT_MAX_PER_DAY;
+    const n = Number(raw);
+    return Number.isFinite(n) && n >= 0 ? n : DEFAULT_MAX_PER_DAY;
+  } catch { return DEFAULT_MAX_PER_DAY; }
+}
+
+function saveMaxPerDay(n: number) {
+  try { localStorage.setItem(MAX_PER_DAY_KEY, String(Math.max(0, Math.floor(n)))); } catch {}
+}
 
 // ⚠️  Supabase projenizi bağladıktan sonra bu iki değeri doldurun.
 // Supabase Dashboard → Project Settings → API kısmından alabilirsiniz.
@@ -156,7 +172,7 @@ async function subscribeToPush(): Promise<PushSubscription | null> {
     if (!sub) {
       sub = await reg.pushManager.subscribe({
         userVisibleOnly:      true,
-        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY),
+        applicationServerKey: urlBase64ToUint8Array(VAPID_PUBLIC_KEY).buffer as ArrayBuffer,
       });
     }
     await savePushSubscription(sub);
@@ -228,7 +244,7 @@ async function syncScheduleToSW(habits: Habit[]) {
     times: getReminderTimes(h), completedDates: h.completions,
     streak: currentStreak(h),
   }));
-  ctrl.postMessage({ type: "SET_SCHEDULE", habits: payload });
+  ctrl.postMessage({ type: "SET_SCHEDULE", habits: payload, maxPerDay: loadMaxPerDay() });
   ctrl.postMessage({ type: "CHECK_NOW" });
 }
 
@@ -237,7 +253,11 @@ function scheduleForToday(habits: Habit[]): () => void {
   if (typeof window === "undefined" || getPermission() !== "granted") return () => {};
   const now   = new Date();
   const fired = loadFired();
+  const maxPerDay = loadMaxPerDay();
 
+  // Tüm bildirimleri saate göre sırala; en erken olanlar önceliklidir.
+  type Item = { key: string; when: Date; habit: Habit };
+  const items: Item[] = [];
   for (const h of habits) {
     const times = getReminderTimes(h);
     times.forEach((t, idx) => {
@@ -246,18 +266,28 @@ function scheduleForToday(habits: Habit[]): () => void {
       const when = new Date();
       when.setHours(Number(mt[1]), Number(mt[2]), 0, 0);
       const key   = `${h.id}@${t}#${idx}`;
-      if (fired.ids.includes(key)) return;
-      const delay = when.getTime() - now.getTime();
-      if (delay < 0) return;
-      const id = window.setTimeout(() => {
-        if (h.completions.includes(todayKey())) return;
-        fireNotification(`⏰ ${h.name}`, motivateFor(h));
-        const f = loadFired();
-        if (!f.ids.includes(key)) { f.ids.push(key); saveFired(f); }
-      }, delay);
-      timers.push(id);
+      items.push({ key, when, habit: h });
     });
   }
+  items.sort((a, b) => a.when.getTime() - b.when.getTime());
+
+  for (const it of items) {
+    if (fired.ids.includes(it.key)) continue;
+    const delay = it.when.getTime() - now.getTime();
+    if (delay < 0) continue;
+    const id = window.setTimeout(() => {
+      if (it.habit.completions.includes(todayKey())) return;
+      const f = loadFired();
+      const limit = loadMaxPerDay();
+      if (limit > 0 && f.ids.length >= limit) return;
+      if (f.ids.includes(it.key)) return;
+      fireNotification(`⏰ ${it.habit.name}`, motivateFor(it.habit));
+      f.ids.push(it.key);
+      saveFired(f);
+    }, delay);
+    timers.push(id);
+  }
+  void maxPerDay;
 
   const midnight = new Date();
   midnight.setHours(24, 0, 30, 0);
@@ -275,10 +305,12 @@ function scheduleForToday(habits: Habit[]): () => void {
 export function useNotifications(habits: Habit[]) {
   const [enabled, setEnabled]         = useState(false);
   const [permission, setPermission]   = useState<NotifPermission>("default");
+  const [maxPerDay, setMaxPerDayState] = useState<number>(DEFAULT_MAX_PER_DAY);
 
   useEffect(() => {
     setPermission(getPermission());
     try { setEnabled(localStorage.getItem(ENABLED_KEY) === "1"); } catch {}
+    setMaxPerDayState(loadMaxPerDay());
   }, []);
 
   useEffect(() => {
@@ -288,7 +320,12 @@ export function useNotifications(habits: Habit[]) {
     const onFocus = () => { cleanup(); syncScheduleToSW(habits); };
     window.addEventListener("focus", onFocus);
     return () => { cleanup(); window.removeEventListener("focus", onFocus); };
-  }, [enabled, habits]);
+  }, [enabled, habits, maxPerDay]);
+
+  const updateMaxPerDay = useCallback((n: number) => {
+    saveMaxPerDay(n);
+    setMaxPerDayState(n);
+  }, []);
 
   // Bildirimleri etkinleştir
   const enable = useCallback(async () => {
@@ -338,5 +375,5 @@ export function useNotifications(habits: Habit[]) {
     await fireNotification("🔔 Zincir", "Bildirimler çalışıyor. Zincirini koru!");
   }, []);
 
-  return { enabled, permission, enable, disable, testNotification };
+  return { enabled, permission, enable, disable, testNotification, maxPerDay, setMaxPerDay: updateMaxPerDay };
 }
